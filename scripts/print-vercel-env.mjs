@@ -31,3 +31,4 @@ console.log(
 console.log("\nFIREBASE_SERVICE_ACCOUNT_JSON");
 console.log(minified);
 console.log("\nThen redeploy the project.");
+
