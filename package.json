@@ -16,16 +16,20 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@reduxjs/toolkit": "^2.11.2",
     "@tiptap/pm": "^3.23.1",
     "@tiptap/react": "^3.23.1",
     "@tiptap/starter-kit": "^3.23.1",
     "firebase": "^12.13.0",
+    "lodash.debounce": "^4.0.8",
     "lucide-react": "^1.14.0",
     "next": "^16.2.6",
     "react": "^19.2.6",
-    "react-dom": "^19.2.6"
+    "react-dom": "^19.2.6",
+    "react-redux": "^9.2.0"
   },
   "devDependencies": {
+    "@types/lodash.debounce": "^4.0.9",
     "typescript": "6.0.3"
   }
 }
