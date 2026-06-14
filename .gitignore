@@ -11,6 +11,9 @@ credentials/
 .env.local
 .env*.local
 
+# vercel
+.vercel
+
 # misc
 .DS_Store
 *.pem

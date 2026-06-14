@@ -41,13 +41,19 @@ export function formatFirebaseAuthError(code: string): string {
   }
 }
 
+function useSecureCookies(): boolean {
+  return (
+    process.env.NODE_ENV === "production" || process.env.VERCEL === "1"
+  );
+}
+
 export function setSessionCookie(
   response: NextResponse,
   sessionCookie: string
 ): void {
   response.cookies.set(SESSION_COOKIE_NAME, sessionCookie, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
+    secure: useSecureCookies(),
     sameSite: "lax",
     maxAge: SESSION_EXPIRES_MS / 1000,
     path: "/",
@@ -57,7 +63,7 @@ export function setSessionCookie(
 export function clearSessionCookie(response: NextResponse): void {
   response.cookies.set(SESSION_COOKIE_NAME, "", {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
+    secure: useSecureCookies(),
     sameSite: "lax",
     maxAge: 0,
     path: "/",

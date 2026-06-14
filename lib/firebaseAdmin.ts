@@ -3,7 +3,7 @@ import * as fs from "fs";
 import * as path from "path";
 
 export const FIREBASE_ADMIN_SETUP_HINT =
-  "Set Firebase Admin credentials in .env.local: either FIREBASE_SERVICE_ACCOUNT_JSON (full JSON), FIREBASE_SERVICE_ACCOUNT_PATH (path to JSON file), or FIREBASE_PROJECT_ID + FIREBASE_CLIENT_EMAIL + FIREBASE_PRIVATE_KEY (real PEM key from Firebase Console → Project settings → Service accounts → Generate new private key).";
+  "Set Firebase Admin credentials: FIREBASE_SERVICE_ACCOUNT_JSON (full JSON; recommended on Vercel), FIREBASE_SERVICE_ACCOUNT_PATH (local path to JSON file), or FIREBASE_PROJECT_ID + FIREBASE_CLIENT_EMAIL + FIREBASE_PRIVATE_KEY.";
 
 function normalizePrivateKey(raw: string): string {
   let key = raw.trim();
