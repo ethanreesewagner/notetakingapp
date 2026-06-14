@@ -1,11 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
-import { doc, setDoc } from "firebase/firestore";
-import { auth, db } from "../../../lib/firebase";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { signupApi } from "../../../lib/apiClient";
+import { useAuth } from "../../../lib/auth";
 
 export default function SignupPage() {
   const [name, setName] = useState("");
@@ -13,28 +12,17 @@ export default function SignupPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const router = useRouter();
+  const { refresh } = useAuth();
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError("");
     try {
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      const user = userCredential.user;
-      
-      // Update display name
-      await updateProfile(user, { displayName: name });
-
-      // Save additional info in Firestore
-      await setDoc(doc(db, "users", user.uid), {
-        info: {
-          name,
-          email,
-          createdAt: new Date().toISOString(),
-        }
-      });
-
+      await signupApi(email, password, name);
+      await refresh();
       router.push("/");
-    } catch (err: any) {
-      setError(err.message || "Failed to sign up");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to sign up");
     }
   };
 
@@ -43,12 +31,14 @@ export default function SignupPage() {
       <div className="glass-container auth-form">
         <h1 className="auth-title">Create Account</h1>
         <p className="auth-subtitle">Join us and start taking beautiful notes</p>
-        
+
         {error && <div className="error-message">{error}</div>}
-        
+
         <form onSubmit={handleSignup} className="auth-form">
           <div className="input-group">
-            <label className="input-label" htmlFor="name">Name</label>
+            <label className="input-label" htmlFor="name">
+              Name
+            </label>
             <input
               id="name"
               type="text"
@@ -61,7 +51,9 @@ export default function SignupPage() {
           </div>
 
           <div className="input-group">
-            <label className="input-label" htmlFor="email">Email</label>
+            <label className="input-label" htmlFor="email">
+              Email
+            </label>
             <input
               id="email"
               type="email"
@@ -72,9 +64,11 @@ export default function SignupPage() {
               required
             />
           </div>
-          
+
           <div className="input-group">
-            <label className="input-label" htmlFor="password">Password</label>
+            <label className="input-label" htmlFor="password">
+              Password
+            </label>
             <input
               id="password"
               type="password"
@@ -86,13 +80,17 @@ export default function SignupPage() {
               minLength={6}
             />
           </div>
-          
-          <button type="submit" className="btn-primary">Sign Up</button>
+
+          <button type="submit" className="btn-primary">
+            Sign Up
+          </button>
         </form>
-        
-        <p style={{ textAlign: 'center', fontSize: '0.875rem' }}>
-          Already have an account?{' '}
-          <Link href="/login" className="auth-link">Sign in</Link>
+
+        <p style={{ textAlign: "center", fontSize: "0.875rem" }}>
+          Already have an account?{" "}
+          <Link href="/login" className="auth-link">
+            Sign in
+          </Link>
         </p>
       </div>
     </div>

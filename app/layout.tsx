@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import './globals.css';
 import { AuthProvider } from '../lib/auth';
+import StoreProvider from '../components/StoreProvider';
 
 export const metadata: Metadata = {
   title: 'Notetaking App',
@@ -16,7 +17,9 @@ export default function RootLayout({
     <html lang="en">
       <body>
         <AuthProvider>
-          {children}
+          <StoreProvider>
+            {children}
+          </StoreProvider>
         </AuthProvider>
       </body>
     </html>

@@ -1,24 +1,27 @@
 "use client";
 
 import { useState } from "react";
-import { signInWithEmailAndPassword } from "firebase/auth";
-import { auth } from "../../../lib/firebase";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { loginApi } from "../../../lib/apiClient";
+import { useAuth } from "../../../lib/auth";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const router = useRouter();
+  const { refresh } = useAuth();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError("");
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      await loginApi(email, password);
+      await refresh();
       router.push("/");
-    } catch (err: any) {
-      setError(err.message || "Failed to login");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to login");
     }
   };
 
@@ -27,12 +30,14 @@ export default function LoginPage() {
       <div className="glass-container auth-form">
         <h1 className="auth-title">Welcome Back</h1>
         <p className="auth-subtitle">Sign in to access your notes</p>
-        
+
         {error && <div className="error-message">{error}</div>}
-        
+
         <form onSubmit={handleLogin} className="auth-form">
           <div className="input-group">
-            <label className="input-label" htmlFor="email">Email</label>
+            <label className="input-label" htmlFor="email">
+              Email
+            </label>
             <input
               id="email"
               type="email"
@@ -43,9 +48,11 @@ export default function LoginPage() {
               required
             />
           </div>
-          
+
           <div className="input-group">
-            <label className="input-label" htmlFor="password">Password</label>
+            <label className="input-label" htmlFor="password">
+              Password
+            </label>
             <input
               id="password"
               type="password"
@@ -56,13 +63,17 @@ export default function LoginPage() {
               required
             />
           </div>
-          
-          <button type="submit" className="btn-primary">Sign In</button>
+
+          <button type="submit" className="btn-primary">
+            Sign In
+          </button>
         </form>
-        
-        <p style={{ textAlign: 'center', fontSize: '0.875rem' }}>
-          Don't have an account?{' '}
-          <Link href="/signup" className="auth-link">Sign up</Link>
+
+        <p style={{ textAlign: "center", fontSize: "0.875rem" }}>
+          Don&apos;t have an account?{" "}
+          <Link href="/signup" className="auth-link">
+            Sign up
+          </Link>
         </p>
       </div>
     </div>

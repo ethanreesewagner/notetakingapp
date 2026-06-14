@@ -16,17 +16,19 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@blocknote/core": "^0.51.2",
+    "@blocknote/mantine": "^0.51.2",
+    "@blocknote/react": "^0.51.2",
     "@reduxjs/toolkit": "^2.11.2",
-    "@tiptap/pm": "^3.23.1",
-    "@tiptap/react": "^3.23.1",
-    "@tiptap/starter-kit": "^3.23.1",
-    "firebase": "^12.13.0",
+    "firebase-admin": "^13.10.0",
     "lodash.debounce": "^4.0.8",
     "lucide-react": "^1.14.0",
     "next": "^16.2.6",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
-    "react-redux": "^9.2.0"
+    "react-redux": "^9.2.0",
+    "y-webrtc": "^10.3.0",
+    "yjs": "^13.6.30"
   },
   "devDependencies": {
     "@types/lodash.debounce": "^4.0.9",
