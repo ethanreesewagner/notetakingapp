@@ -1,12 +1,14 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import { useState } from "react";
 import ChatAgent from "./ChatAgent";
 import Sidebar from "./sidebar";
+import ShareModal from "./ShareModal";
 import { useAuth } from "../lib/auth";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Loader2 } from "lucide-react";
+import { Loader2, Share2 } from "lucide-react";
 import { useSelector } from "react-redux";
 import { RootState } from "../store";
 
@@ -17,7 +19,10 @@ const BlockNoteEditor = dynamic(() => import("./BlockNoteEditor"), {
 export default function WorkspaceShell() {
   const { user, loading } = useAuth();
   const router = useRouter();
-  const { activePageId } = useSelector((state: RootState) => state.page);
+  const { activePageId, pages } = useSelector((state: RootState) => state.page);
+  const [shareOpen, setShareOpen] = useState(false);
+
+  const activePage = pages.find((p) => p.id === activePageId) ?? null;
 
   if (loading) {
     return (
@@ -45,9 +50,40 @@ export default function WorkspaceShell() {
     <main className="app-container">
       <Sidebar />
       <div className="main-content">
+        {/* ── Slim top bar ── */}
+        <div className="top-bar">
+          <div className="top-bar-breadcrumb">
+            {activePage ? (
+              <span className="top-bar-page-name">{activePage.title || "Untitled"}</span>
+            ) : (
+              <span className="top-bar-page-name top-bar-page-name--empty">Select a page</span>
+            )}
+          </div>
+          {activePageId && activePage && (
+            <button
+              id="share-btn"
+              className="share-trigger-btn"
+              onClick={() => setShareOpen(true)}
+              title="Share this page"
+            >
+              <Share2 size={15} />
+              Share
+            </button>
+          )}
+        </div>
+
         <BlockNoteEditor key={activePageId || "empty"} />
       </div>
+
       <ChatAgent />
+
+      {shareOpen && activePageId && activePage && (
+        <ShareModal
+          pageId={activePageId}
+          pageTitle={activePage.title || "Untitled"}
+          onClose={() => setShareOpen(false)}
+        />
+      )}
     </main>
   );
 }

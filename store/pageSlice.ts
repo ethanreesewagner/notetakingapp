@@ -50,6 +50,22 @@ const pageSlice = createSlice({
     bumpAgentContentRevision: (state) => {
       state.agentContentRevision += 1;
     },
+    removePageLocally: (state, action: PayloadAction<string>) => {
+      // Remove the page and all its descendants
+      const toRemove = new Set<string>();
+      const queue = [action.payload];
+      while (queue.length) {
+        const current = queue.shift()!;
+        toRemove.add(current);
+        state.pages
+          .filter((p) => p.parentId === current)
+          .forEach((p) => queue.push(p.id));
+      }
+      state.pages = state.pages.filter((p) => !toRemove.has(p.id));
+      if (state.activePageId && toRemove.has(state.activePageId)) {
+        state.activePageId = null;
+      }
+    },
   },
 });
 
@@ -60,5 +76,6 @@ export const {
   updateActivePageTitle,
   addPageLocally,
   bumpAgentContentRevision,
+  removePageLocally,
 } = pageSlice.actions;
 export default pageSlice.reducer;

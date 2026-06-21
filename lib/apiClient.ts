@@ -88,3 +88,47 @@ export async function signupApi(
 export async function logoutApi() {
   return fetchWithAuth("/api/auth/logout", { method: "POST" });
 }
+
+// ── Page sharing ──────────────────────────────────────────────────────────────
+
+export async function createShareApi(
+  pageId: string,
+  type: "public" | "private",
+  emails: string[] = []
+) {
+  return fetchWithAuth(`/api/pages/${pageId}/share`, {
+    method: "POST",
+    body: { type, emails },
+  });
+}
+
+export async function getShareApi(pageId: string) {
+  return fetchWithAuth(`/api/pages/${pageId}/share`);
+}
+
+export async function deleteShareApi(pageId: string) {
+  return fetchWithAuth(`/api/pages/${pageId}/share`, { method: "DELETE" });
+}
+
+// ── Page deletion ─────────────────────────────────────────────────────────────
+
+export async function deletePageApi(pageId: string) {
+  return fetchWithAuth(`/api/pages/${pageId}`, { method: "DELETE" });
+}
+
+// ── Shared with me ────────────────────────────────────────────────────────────
+
+export interface SharedWithMeEntry {
+  shareId: string;
+  pageId: string;
+  pageTitle: string;
+  ownerUid: string;
+  ownerEmail: string;
+  token: string;
+  url: string;
+}
+
+export async function getSharedWithMeApi(): Promise<SharedWithMeEntry[]> {
+  return fetchWithAuth("/api/shares");
+}
+
