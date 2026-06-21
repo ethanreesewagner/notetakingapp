@@ -79,6 +79,31 @@ export default function BlockNoteEditor() {
         color: "#" + Math.floor(Math.random()*16777215).toString(16)
       }
     } : undefined,
+    links: {
+      onClick: (event: any) => {
+        const anchor = (event.target as HTMLElement).closest("a");
+        if (anchor) {
+          try {
+            const url = new URL(anchor.href, window.location.href);
+            if (
+              url.origin === window.location.origin &&
+              url.pathname.startsWith("/page/")
+            ) {
+              const pageId = url.pathname.split("/page/")[1];
+              if (pageId) {
+                dispatch(setActivePageId(pageId));
+                router.push(url.pathname);
+                event.preventDefault();
+                return true;
+              }
+            }
+          } catch (e) {
+            console.error("Error handling link click", e);
+          }
+        }
+        return false;
+      },
+    },
     // Note: When using collaboration, initialContent MUST be set via the collaboration provider.
     // Setting `initialContent` directly combined with `collaboration` causes BlockNote initialization failure.
     // However, if we're solely relying on standard DB fetching without actual server-side Yjs persistence,
