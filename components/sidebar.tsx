@@ -8,7 +8,8 @@ import { fetchPages, createPageApi } from "../lib/apiClient";
 import { buildPageTree, type PageNode } from "../lib/pageTree";
 import { setPages, setActivePageId, addPageLocally } from "../store/pageSlice";
 import { RootState } from "../store";
-import { Plus, FileText, Loader2, ChevronRight, ChevronDown } from "lucide-react";
+import { Plus, FileText, Loader2, ChevronRight, ChevronDown, LogOut } from "lucide-react";
+import { logoutApi } from "../lib/apiClient";
 
 function PageTreeItem({
   node,
@@ -98,7 +99,7 @@ function PageTreeItem({
 }
 
 export default function Sidebar() {
-  const { user, loading } = useAuth();
+  const { user, loading, refresh } = useAuth();
   const dispatch = useDispatch();
   const router = useRouter();
   const { pages, activePageId } = useSelector((state: RootState) => state.page);
@@ -209,6 +210,21 @@ export default function Sidebar() {
         {pages.length === 0 && (
           <div className="sidebar-nav-empty">No pages inside</div>
         )}
+      </div>
+
+      <div className="sidebar-footer">
+        <button
+          className="sign-out-btn"
+          title="Sign Out"
+          onClick={async () => {
+            await logoutApi();
+            await refresh();
+            router.push("/login");
+          }}
+        >
+          <LogOut size={16} />
+          <span>Sign Out</span>
+        </button>
       </div>
     </div>
   );

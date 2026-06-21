@@ -102,6 +102,7 @@ body {
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
+  flex: 1;
 }
 
 .sidebar-nav-empty {
@@ -294,7 +295,8 @@ body {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.5rem 1rem;
+  width: 100%;
+  padding: 0.5rem 0.75rem;
   font-size: 0.875rem;
   font-weight: 500;
   border-radius: 6px;
@@ -303,11 +305,17 @@ body {
   border: none;
   cursor: pointer;
   transition: all 0.2s ease;
+  text-align: left;
 }
 
 .sign-out-btn:hover {
-  background: rgba(255, 255, 255, 0.1);
-  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.08);
+  color: #f87171;
+}
+
+.sidebar-footer {
+  padding: 0.75rem 0.5rem;
+  border-top: 1px solid var(--glass-border);
 }
 
 /* Original UI Classes */

@@ -4,10 +4,9 @@ import dynamic from "next/dynamic";
 import ChatAgent from "./ChatAgent";
 import Sidebar from "./sidebar";
 import { useAuth } from "../lib/auth";
-import { logoutApi } from "../lib/apiClient";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Loader2, LogOut } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { useSelector } from "react-redux";
 import { RootState } from "../store";
 
@@ -16,7 +15,7 @@ const BlockNoteEditor = dynamic(() => import("./BlockNoteEditor"), {
 });
 
 export default function WorkspaceShell() {
-  const { user, loading, refresh } = useAuth();
+  const { user, loading } = useAuth();
   const router = useRouter();
   const { activePageId } = useSelector((state: RootState) => state.page);
 
@@ -46,18 +45,6 @@ export default function WorkspaceShell() {
     <main className="app-container">
       <Sidebar />
       <div className="main-content">
-        <button
-          onClick={async () => {
-            await logoutApi();
-            await refresh();
-            router.push("/login");
-          }}
-          className="sign-out-btn"
-          title="Sign Out"
-        >
-          <LogOut size={16} />
-          <span>Sign Out</span>
-        </button>
         <BlockNoteEditor key={activePageId || "empty"} />
       </div>
       <ChatAgent />
