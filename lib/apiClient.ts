@@ -132,3 +132,28 @@ export async function getSharedWithMeApi(): Promise<SharedWithMeEntry[]> {
   return fetchWithAuth("/api/shares");
 }
 
+// ── Personal music tracks ─────────────────────────────────────────────────────
+
+export interface SavedTrack {
+  id: string;
+  videoId: string;
+  title: string;
+  artist: string;
+  createdAt: string;
+}
+
+export async function getTracksApi(): Promise<SavedTrack[]> {
+  return fetchWithAuth("/api/tracks");
+}
+
+export async function addTrackApi(url: string, title?: string): Promise<SavedTrack> {
+  return fetchWithAuth("/api/tracks", {
+    method: "POST",
+    body: { url, title },
+  });
+}
+
+export async function deleteTrackApi(id: string) {
+  return fetchWithAuth(`/api/tracks/${id}`, { method: "DELETE" });
+}
+
