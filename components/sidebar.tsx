@@ -21,6 +21,7 @@ import {
   User,
 } from "lucide-react";
 import DeleteConfirmDialog from "./DeleteConfirmDialog";
+import BackgroundMusicPlayer from "./BackgroundMusicPlayer";
 
 function PageTreeItem({
   node,
@@ -372,6 +373,7 @@ export default function Sidebar() {
 
         {/* ── Footer ───────────────────────────────────────────────── */}
         <div className="sidebar-footer">
+          <BackgroundMusicPlayer />
           <button
             className="sign-out-btn"
             title="Sign Out"
