@@ -1788,3 +1788,281 @@ body {
 .page-picker-list::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.2);
 }
+
+/* ══ Optional YouTube background video ══════════════════════════════════════ */
+
+/* The whole site lives inside .site-layer; its opacity is driven by the
+   background-video control so the video behind can show through. */
+.site-layer {
+  opacity: var(--site-opacity, 1);
+  transition: opacity 0.35s ease;
+}
+
+/* Full-viewport video, pinned behind everything. */
+.bgv-layer {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  background: #000;
+  pointer-events: none;
+}
+
+/* Scale the 16:9 iframe to cover the viewport (like background-size: cover). */
+.bgv-frame {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 100vw;
+  height: 56.25vw;
+  min-height: 100vh;
+  min-width: 177.78vh;
+  transform: translate(-50%, -50%);
+  border: 0;
+  pointer-events: none;
+}
+
+/* ── Floating control widget (top-right) ─────────────────────────────────── */
+.bgv-widget {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  z-index: 1500;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.6rem;
+}
+
+.bgv-toggle {
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 50%;
+  border: 1px solid var(--glass-border);
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  color: var(--text-secondary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.bgv-toggle:hover {
+  color: var(--text-primary);
+  transform: scale(1.05);
+}
+
+.bgv-toggle.on {
+  background: var(--accent-color);
+  color: #fff;
+  border-color: var(--accent-color);
+}
+
+.bgv-panel {
+  width: 300px;
+  max-width: calc(100vw - 2rem);
+  padding: 0.9rem;
+  border-radius: 14px;
+  background: rgba(18, 12, 34, 0.94);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border: 1px solid var(--glass-border);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5);
+}
+
+.bgv-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.7rem;
+}
+
+.bgv-panel-title {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-secondary);
+}
+
+.bgv-close {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  display: flex;
+  padding: 2px;
+  border-radius: 4px;
+}
+
+.bgv-close:hover {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.bgv-input-row {
+  display: flex;
+  gap: 0.4rem;
+  margin-bottom: 0.5rem;
+}
+
+.bgv-input {
+  flex: 1;
+  min-width: 0;
+  padding: 0.45rem 0.55rem;
+  font-size: 0.78rem;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--glass-border);
+  color: var(--text-primary);
+  outline: none;
+}
+
+.bgv-input:focus {
+  border-color: var(--accent-color);
+}
+
+.bgv-set {
+  flex-shrink: 0;
+  padding: 0.45rem 0.8rem;
+  font-size: 0.78rem;
+  font-weight: 500;
+  border-radius: 6px;
+  border: none;
+  background: var(--accent-color);
+  color: #fff;
+  cursor: pointer;
+}
+
+.bgv-set:hover {
+  background: var(--accent-hover);
+}
+
+.bgv-error {
+  font-size: 0.72rem;
+  color: #f87171;
+  margin-bottom: 0.5rem;
+}
+
+/* Three mix-mode buttons */
+.bgv-modes {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.4rem;
+  margin: 0.6rem 0;
+}
+
+.bgv-mode {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.55rem 0.25rem;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--glass-border);
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 0.7rem;
+  transition: all 0.15s ease;
+}
+
+.bgv-mode:hover:not(:disabled) {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.bgv-mode.active {
+  color: #fff;
+  background: var(--accent-color);
+  border-color: var(--accent-color);
+}
+
+.bgv-mode:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+/* Fine opacity control */
+.bgv-opacity {
+  margin-bottom: 0.7rem;
+}
+
+.bgv-opacity-label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+  margin-bottom: 0.3rem;
+}
+
+.bgv-opacity input[type="range"] {
+  width: 100%;
+  accent-color: var(--accent-color);
+  cursor: pointer;
+}
+
+.bgv-opacity input[type="range"]:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.bgv-footer {
+  display: flex;
+  gap: 0.4rem;
+  justify-content: space-between;
+}
+
+.bgv-mute,
+.bgv-power {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.4rem 0.7rem;
+  font-size: 0.76rem;
+  font-weight: 500;
+  border-radius: 6px;
+  border: 1px solid var(--glass-border);
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.bgv-mute:hover:not(:disabled) {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.bgv-mute:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.bgv-power.on {
+  color: #4ade80;
+  border-color: rgba(74, 222, 128, 0.4);
+}
+
+.bgv-power.on:hover:not(:disabled) {
+  background: rgba(74, 222, 128, 0.12);
+}
+
+.bgv-power.on:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.bgv-power.off {
+  color: #f87171;
+  border-color: rgba(248, 113, 113, 0.4);
+}
+
+.bgv-power.off:hover {
+  background: rgba(248, 113, 113, 0.12);
+}

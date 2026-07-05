@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import './globals.css';
 import { AuthProvider } from '../lib/auth';
 import StoreProvider from '../components/StoreProvider';
+import BackgroundVideo from '../components/BackgroundVideo';
 
 export const metadata: Metadata = {
   title: 'Notetaking App',
@@ -18,7 +19,10 @@ export default function RootLayout({
       <body>
         <AuthProvider>
           <StoreProvider>
-            {children}
+            {/* Optional YouTube background video sits behind everything;
+                its controls stay fully opaque outside .site-layer. */}
+            <BackgroundVideo />
+            <div className="site-layer">{children}</div>
           </StoreProvider>
         </AuthProvider>
       </body>
