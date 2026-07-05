@@ -10,27 +10,28 @@ import {
   X,
   ListMusic,
   Plus,
-  Trash2,
   Loader2,
 } from "lucide-react";
 import { useAuth } from "../lib/auth";
 import {
   getTracksApi,
   addTrackApi,
+  updateTrackApi,
   deleteTrackApi,
-  type SavedTrack,
 } from "../lib/apiClient";
+import { loadYouTubeApi, formatTime, type YTPlayer } from "../lib/youtube";
+import { useMediaPlaylist } from "../lib/useMediaPlaylist";
+import DraggablePlaylist from "./DraggablePlaylist";
 
 type Track = {
   key: string;
   title: string;
   artist: string;
   videoId: string;
-  savedId?: string; // present → user-added (deletable)
+  savedId?: string;
 };
 
-// The built-in default background playlist. These are always present and cannot
-// be removed. User-added tracks (from Firebase) are appended after these.
+// Built-in defaults — always present, not editable/removable/reorderable.
 const DEFAULT_PLAYLIST: Track[] = [
   { key: "d0", title: "Resonance", artist: "HOME", videoId: "8GW6sLrK40k" },
   { key: "d1", title: "Crystal Skies", artist: "VXLLAIN, iGRES, ENXK", videoId: "qsD-nh0BJsQ" },
@@ -39,62 +40,18 @@ const DEFAULT_PLAYLIST: Track[] = [
   { key: "d4", title: "Complete Music Mix", artist: "Frutiger Aero", videoId: "J_BwEIjCGHc" },
 ];
 
-// ── YouTube IFrame API loader (shared, loads the script only once) ──────────
-declare global {
-  interface Window {
-    YT?: {
-      Player: new (el: HTMLElement | string, opts: unknown) => YTPlayer;
-      PlayerState: { PLAYING: number; ENDED: number; PAUSED: number };
-    };
-    onYouTubeIframeAPIReady?: () => void;
-  }
-}
-
-interface YTPlayer {
-  loadVideoById: (id: string) => void;
-  playVideo: () => void;
-  pauseVideo: () => void;
-  setVolume: (v: number) => void;
-  getCurrentTime: () => number;
-  getDuration: () => number;
-  seekTo: (seconds: number, allowSeekAhead: boolean) => void;
-  destroy: () => void;
-}
-
-let ytApiPromise: Promise<void> | null = null;
-
-function loadYouTubeApi(): Promise<void> {
-  if (typeof window === "undefined") return Promise.resolve();
-  if (window.YT?.Player) return Promise.resolve();
-  if (ytApiPromise) return ytApiPromise;
-
-  ytApiPromise = new Promise<void>((resolve) => {
-    const prev = window.onYouTubeIframeAPIReady;
-    window.onYouTubeIframeAPIReady = () => {
-      prev?.();
-      resolve();
-    };
-    const tag = document.createElement("script");
-    tag.src = "https://www.youtube.com/iframe_api";
-    document.head.appendChild(tag);
-  });
-  return ytApiPromise;
-}
-
-function formatTime(sec: number): string {
-  if (!isFinite(sec) || sec < 0) return "0:00";
-  const m = Math.floor(sec / 60);
-  const s = Math.floor(sec % 60);
-  return `${m}:${s.toString().padStart(2, "0")}`;
-}
-
 export default function BackgroundMusicPlayer() {
   const { user } = useAuth();
 
-  const [savedTracks, setSavedTracks] = useState<SavedTrack[]>([]);
-  const playlist: Track[] = [
+  const playlist = useMediaPlaylist(
+    { get: getTracksApi, add: addTrackApi, update: updateTrackApi, remove: deleteTrackApi },
+    !!user?.uid
+  );
+
+  // Combined view: fixed defaults followed by the user's saved tracks.
+  const combined: Track[] = [
     ...DEFAULT_PLAYLIST,
-    ...savedTracks.map((t) => ({
+    ...playlist.items.map((t) => ({
       key: t.id,
       title: t.title,
       artist: t.artist,
@@ -106,15 +63,13 @@ export default function BackgroundMusicPlayer() {
   const [open, setOpen] = useState(false);
   const [ready, setReady] = useState(false);
   const [playing, setPlaying] = useState(false);
-  const [current, setCurrent] = useState(0);
+  const [currentKey, setCurrentKey] = useState<string>("d0");
   const [volume, setVolume] = useState(50);
 
-  // Progress state
   const [elapsed, setElapsed] = useState(0);
   const [duration, setDuration] = useState(0);
   const scrubbingRef = useRef(false);
 
-  // Add-track form state
   const [showAdd, setShowAdd] = useState(false);
   const [newUrl, setNewUrl] = useState("");
   const [newTitle, setNewTitle] = useState("");
@@ -123,22 +78,17 @@ export default function BackgroundMusicPlayer() {
 
   const playerRef = useRef<YTPlayer | null>(null);
   const mountRef = useRef<HTMLDivElement | null>(null);
-  // Keep the latest index & playlist length accessible inside YT callbacks.
-  const currentRef = useRef(current);
-  currentRef.current = current;
-  const lenRef = useRef(playlist.length);
-  lenRef.current = playlist.length;
 
-  // Load the user's saved tracks once they're authenticated.
-  useEffect(() => {
-    if (!user?.uid) {
-      setSavedTracks([]);
-      return;
-    }
-    getTracksApi()
-      .then(setSavedTracks)
-      .catch(() => {});
-  }, [user?.uid]);
+  // Refs so the YT event callbacks always read fresh values.
+  const combinedRef = useRef(combined);
+  combinedRef.current = combined;
+  const currentKeyRef = useRef(currentKey);
+  currentKeyRef.current = currentKey;
+
+  const currentIndex = () => {
+    const i = combinedRef.current.findIndex((t) => t.key === currentKeyRef.current);
+    return i < 0 ? 0 : i;
+  };
 
   // Initialize the invisible YouTube player once.
   useEffect(() => {
@@ -159,14 +109,7 @@ export default function BackgroundMusicPlayer() {
             const YT = window.YT!;
             if (e.data === YT.PlayerState.PLAYING) setPlaying(true);
             else if (e.data === YT.PlayerState.PAUSED) setPlaying(false);
-            else if (e.data === YT.PlayerState.ENDED) {
-              // Auto-advance to the next track when one finishes.
-              const next = (currentRef.current + 1) % lenRef.current;
-              currentRef.current = next;
-              setCurrent(next);
-              playerRef.current?.loadVideoById(playlistRef.current[next].videoId);
-              playerRef.current?.playVideo();
-            }
+            else if (e.data === YT.PlayerState.ENDED) playByIndex(currentIndex() + 1);
           },
         },
       });
@@ -179,32 +122,33 @@ export default function BackgroundMusicPlayer() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Keep a ref to the current playlist so YT callbacks read fresh videoIds.
-  const playlistRef = useRef(playlist);
-  playlistRef.current = playlist;
-
-  // Poll playback position for the progress bar while playing.
+  // Poll playback position for the progress bar.
   useEffect(() => {
     if (!ready) return;
     const id = window.setInterval(() => {
       const p = playerRef.current;
       if (!p || scrubbingRef.current) return;
-      const d = p.getDuration?.() ?? 0;
-      const t = p.getCurrentTime?.() ?? 0;
-      setDuration(d);
-      setElapsed(t);
+      setDuration(p.getDuration?.() ?? 0);
+      setElapsed(p.getCurrentTime?.() ?? 0);
     }, 500);
     return () => window.clearInterval(id);
   }, [ready]);
 
-  const playIndex = (i: number) => {
-    if (!playerRef.current) return;
-    setCurrent(i);
-    currentRef.current = i;
+  const playByIndex = (i: number) => {
+    const list = combinedRef.current;
+    if (!list.length || !playerRef.current) return;
+    const item = list[((i % list.length) + list.length) % list.length];
+    setCurrentKey(item.key);
+    currentKeyRef.current = item.key;
     setElapsed(0);
     setDuration(0);
-    playerRef.current.loadVideoById(playlist[i].videoId);
+    playerRef.current.loadVideoById(item.videoId);
     playerRef.current.playVideo();
+  };
+
+  const playByKey = (key: string) => {
+    const idx = combinedRef.current.findIndex((t) => t.key === key);
+    if (idx >= 0) playByIndex(idx);
   };
 
   const togglePlay = () => {
@@ -213,15 +157,11 @@ export default function BackgroundMusicPlayer() {
     else playerRef.current.playVideo();
   };
 
-  const next = () => playIndex((current + 1) % playlist.length);
-  const prev = () => playIndex((current - 1 + playlist.length) % playlist.length);
-
   const changeVolume = (v: number) => {
     setVolume(v);
     playerRef.current?.setVolume(v);
   };
 
-  // Progress bar seeking
   const onSeekInput = (v: number) => {
     scrubbingRef.current = true;
     setElapsed(v);
@@ -238,8 +178,7 @@ export default function BackgroundMusicPlayer() {
     setAdding(true);
     setAddError(null);
     try {
-      const saved = await addTrackApi(newUrl.trim(), newTitle.trim() || undefined);
-      setSavedTracks((prev) => [...prev, saved]);
+      await playlist.add(newUrl.trim(), newTitle.trim() || undefined);
       setNewUrl("");
       setNewTitle("");
       setShowAdd(false);
@@ -250,22 +189,10 @@ export default function BackgroundMusicPlayer() {
     }
   };
 
-  const handleDeleteTrack = async (savedId: string) => {
-    const removedIdx = playlist.findIndex((t) => t.savedId === savedId);
-    try {
-      await deleteTrackApi(savedId);
-      setSavedTracks((prev) => prev.filter((t) => t.id !== savedId));
-      // If we removed the track currently playing (or one before it), fix index.
-      if (removedIdx !== -1 && removedIdx <= current && current > 0) {
-        setCurrent((c) => c - 1);
-      }
-    } catch {
-      /* ignore delete failures */
-    }
-  };
-
-  const track = playlist[current] ?? DEFAULT_PLAYLIST[0];
+  const track = combined[currentIndex()] ?? DEFAULT_PLAYLIST[0];
   const seekMax = duration > 0 ? duration : 0;
+  const seekPct = seekMax ? (Math.min(elapsed, seekMax) / seekMax) * 100 : 0;
+  const activeSavedId = track.savedId ?? null;
 
   return (
     <>
@@ -322,11 +249,7 @@ export default function BackgroundMusicPlayer() {
                 onTouchEnd={(e) => onSeekCommit(Number((e.target as HTMLInputElement).value))}
                 aria-label="Seek"
                 style={{
-                  background: `linear-gradient(to right, var(--accent-color) ${
-                    seekMax ? (Math.min(elapsed, seekMax) / seekMax) * 100 : 0
-                  }%, rgba(255,255,255,0.15) ${
-                    seekMax ? (Math.min(elapsed, seekMax) / seekMax) * 100 : 0
-                  }%)`,
+                  background: `linear-gradient(to right, var(--accent-color) ${seekPct}%, rgba(255,255,255,0.15) ${seekPct}%)`,
                 }}
               />
               <div className="music-time">
@@ -336,7 +259,7 @@ export default function BackgroundMusicPlayer() {
             </div>
 
             <div className="music-controls">
-              <button onClick={prev} disabled={!ready} aria-label="Previous">
+              <button onClick={() => playByIndex(currentIndex() - 1)} disabled={!ready} aria-label="Previous">
                 <SkipBack size={16} />
               </button>
               <button
@@ -347,7 +270,7 @@ export default function BackgroundMusicPlayer() {
               >
                 {playing ? <Pause size={18} /> : <Play size={18} />}
               </button>
-              <button onClick={next} disabled={!ready} aria-label="Next">
+              <button onClick={() => playByIndex(currentIndex() + 1)} disabled={!ready} aria-label="Next">
                 <SkipForward size={16} />
               </button>
             </div>
@@ -364,92 +287,91 @@ export default function BackgroundMusicPlayer() {
               />
             </div>
 
-            <div className="music-tracklist">
-              {playlist.map((t, i) => (
+            {/* Default tracks */}
+            <div className="media-section-label">Starter playlist</div>
+            <div className="media-list">
+              {DEFAULT_PLAYLIST.map((t) => (
                 <div
                   key={t.key}
-                  className={`music-track ${i === current ? "active" : ""}`}
+                  className={`media-row ${currentKey === t.key ? "active" : ""}`}
                 >
-                  <button
-                    className="music-track-main"
-                    onClick={() => playIndex(i)}
-                    disabled={!ready}
-                  >
-                    <span className="music-track-index">
-                      {i === current && playing ? (
+                  <button className="media-main media-main--nogrip" onClick={() => playByKey(t.key)}>
+                    <span className="media-index">
+                      {currentKey === t.key && playing ? (
                         <span className="music-bars">
                           <span />
                           <span />
                           <span />
                         </span>
                       ) : (
-                        i + 1
+                        "♪"
                       )}
                     </span>
-                    <span className="music-track-meta">
-                      <span className="music-track-title">{t.title}</span>
-                      <span className="music-track-artist">{t.artist}</span>
+                    <span className="media-meta">
+                      <span className="media-title">{t.title}</span>
+                      <span className="media-artist">{t.artist}</span>
                     </span>
                   </button>
-                  {t.savedId && (
-                    <button
-                      className="music-track-delete"
-                      onClick={() => handleDeleteTrack(t.savedId!)}
-                      title="Remove from playlist"
-                      aria-label="Remove track"
-                    >
-                      <Trash2 size={13} />
-                    </button>
-                  )}
                 </div>
               ))}
             </div>
 
-            {/* Add-your-own-music */}
-            {user &&
-              (showAdd ? (
-                <form className="music-add-form" onSubmit={handleAddTrack}>
-                  <input
-                    className="music-add-input"
-                    type="text"
-                    placeholder="Paste a YouTube link…"
-                    value={newUrl}
-                    onChange={(e) => setNewUrl(e.target.value)}
-                    autoFocus
-                  />
-                  <input
-                    className="music-add-input"
-                    type="text"
-                    placeholder="Title (optional)"
-                    value={newTitle}
-                    onChange={(e) => setNewTitle(e.target.value)}
-                  />
-                  {addError && <div className="music-add-error">{addError}</div>}
-                  <div className="music-add-actions">
-                    <button
-                      type="button"
-                      className="music-add-cancel"
-                      onClick={() => {
-                        setShowAdd(false);
-                        setAddError(null);
-                      }}
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      type="submit"
-                      className="music-add-save"
-                      disabled={adding || !newUrl.trim()}
-                    >
-                      {adding ? <Loader2 size={13} className="animate-spin" /> : "Add"}
-                    </button>
-                  </div>
-                </form>
-              ) : (
-                <button className="music-add-btn" onClick={() => setShowAdd(true)}>
-                  <Plus size={14} /> Add your own music
-                </button>
-              ))}
+            {/* User tracks — draggable + full CRUD */}
+            {user && (
+              <>
+                <div className="media-section-label">Your tracks</div>
+                <DraggablePlaylist
+                  items={playlist.items}
+                  activeId={activeSavedId}
+                  playing={playing}
+                  emptyText="No saved tracks yet"
+                  onPlay={playByKey}
+                  onRename={playlist.rename}
+                  onDelete={playlist.remove}
+                  onReorder={playlist.reorder}
+                />
+
+                {showAdd ? (
+                  <form className="music-add-form" onSubmit={handleAddTrack}>
+                    <input
+                      className="music-add-input"
+                      type="text"
+                      placeholder="Paste a YouTube link…"
+                      value={newUrl}
+                      onChange={(e) => setNewUrl(e.target.value)}
+                      autoFocus
+                    />
+                    <input
+                      className="music-add-input"
+                      type="text"
+                      placeholder="Title (optional)"
+                      value={newTitle}
+                      onChange={(e) => setNewTitle(e.target.value)}
+                    />
+                    {addError && <div className="music-add-error">{addError}</div>}
+                    <div className="music-add-actions">
+                      <button
+                        type="button"
+                        className="music-add-cancel"
+                        onClick={() => {
+                          setShowAdd(false);
+                          setAddError(null);
+                        }}
+                      >
+                        Cancel
+                      </button>
+                      <button type="submit" className="music-add-save" disabled={adding || !newUrl.trim()}>
+                        {adding ? <Loader2 size={13} className="animate-spin" /> : "Add"}
+                      </button>
+                    </div>
+                  </form>
+                ) : (
+                  <button className="music-add-btn" onClick={() => setShowAdd(true)}>
+                    <Plus size={14} /> Add your own music
+                  </button>
+                )}
+              </>
+            )}
           </div>
         )}
 

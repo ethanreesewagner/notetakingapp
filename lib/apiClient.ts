@@ -132,28 +132,136 @@ export async function getSharedWithMeApi(): Promise<SharedWithMeEntry[]> {
   return fetchWithAuth("/api/shares");
 }
 
-// ── Personal music tracks ─────────────────────────────────────────────────────
+// ── Personal media playlists (music tracks & background-video lectures) ────────
 
-export interface SavedTrack {
+export interface SavedMedia {
   id: string;
   videoId: string;
   title: string;
   artist: string;
+  order: number;
   createdAt: string;
 }
+
+// Music tracks
+export type SavedTrack = SavedMedia;
 
 export async function getTracksApi(): Promise<SavedTrack[]> {
   return fetchWithAuth("/api/tracks");
 }
 
 export async function addTrackApi(url: string, title?: string): Promise<SavedTrack> {
-  return fetchWithAuth("/api/tracks", {
-    method: "POST",
-    body: { url, title },
-  });
+  return fetchWithAuth("/api/tracks", { method: "POST", body: { url, title } });
+}
+
+export async function updateTrackApi(
+  id: string,
+  updates: { title?: string; order?: number }
+) {
+  return fetchWithAuth(`/api/tracks/${id}`, { method: "PUT", body: updates });
 }
 
 export async function deleteTrackApi(id: string) {
   return fetchWithAuth(`/api/tracks/${id}`, { method: "DELETE" });
+}
+
+// Background-video lectures
+export type SavedLecture = SavedMedia;
+
+export async function getLecturesApi(): Promise<SavedLecture[]> {
+  return fetchWithAuth("/api/lectures");
+}
+
+export async function addLectureApi(url: string, title?: string): Promise<SavedLecture> {
+  return fetchWithAuth("/api/lectures", { method: "POST", body: { url, title } });
+}
+
+export async function updateLectureApi(
+  id: string,
+  updates: { title?: string; order?: number }
+) {
+  return fetchWithAuth(`/api/lectures/${id}`, { method: "PUT", body: updates });
+}
+
+export async function deleteLectureApi(id: string) {
+  return fetchWithAuth(`/api/lectures/${id}`, { method: "DELETE" });
+}
+
+// ── Flashcards (decks & cards) ─────────────────────────────────────────────────
+
+export interface Deck {
+  id: string;
+  name: string;
+  sourcePageId: string | null;
+  sourcePageTitle: string | null;
+  cardCount: number;
+  createdAt: string | null;
+}
+
+export interface Flashcard {
+  id: string;
+  front: string;
+  back: string;
+  order: number;
+  dueAt: number;
+  interval: number;
+  ease: number;
+  reps: number;
+  lapses: number;
+}
+
+export async function getDecksApi(): Promise<Deck[]> {
+  return fetchWithAuth("/api/decks");
+}
+
+export async function createDeckApi(name: string): Promise<Deck> {
+  return fetchWithAuth("/api/decks", { method: "POST", body: { name } });
+}
+
+export async function renameDeckApi(id: string, name: string) {
+  return fetchWithAuth(`/api/decks/${id}`, { method: "PUT", body: { name } });
+}
+
+export async function deleteDeckApi(id: string) {
+  return fetchWithAuth(`/api/decks/${id}`, { method: "DELETE" });
+}
+
+export async function getCardsApi(deckId: string): Promise<Flashcard[]> {
+  return fetchWithAuth(`/api/decks/${deckId}/cards`);
+}
+
+export async function addCardApi(
+  deckId: string,
+  front: string,
+  back: string
+): Promise<Flashcard> {
+  return fetchWithAuth(`/api/decks/${deckId}/cards`, {
+    method: "POST",
+    body: { front, back },
+  });
+}
+
+export async function updateCardApi(
+  deckId: string,
+  cardId: string,
+  updates: Partial<Pick<Flashcard, "front" | "back" | "order" | "dueAt" | "interval" | "ease" | "reps" | "lapses">>
+) {
+  return fetchWithAuth(`/api/decks/${deckId}/cards/${cardId}`, {
+    method: "PUT",
+    body: updates,
+  });
+}
+
+export async function deleteCardApi(deckId: string, cardId: string) {
+  return fetchWithAuth(`/api/decks/${deckId}/cards/${cardId}`, { method: "DELETE" });
+}
+
+export async function generateFlashcardsApi(
+  pageId: string
+): Promise<{ deck: Deck; cards: Flashcard[] }> {
+  return fetchWithAuth("/api/flashcards/generate", {
+    method: "POST",
+    body: { pageId },
+  });
 }
 

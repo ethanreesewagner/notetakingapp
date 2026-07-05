@@ -5,10 +5,11 @@ import { useState } from "react";
 import ChatAgent from "./ChatAgent";
 import Sidebar from "./sidebar";
 import ShareModal from "./ShareModal";
+import FlashcardsModal from "./FlashcardsModal";
 import { useAuth } from "../lib/auth";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Loader2, Share2 } from "lucide-react";
+import { Loader2, Share2, Layers } from "lucide-react";
 import { useSelector } from "react-redux";
 import { RootState } from "../store";
 
@@ -21,6 +22,7 @@ export default function WorkspaceShell() {
   const router = useRouter();
   const { activePageId, pages } = useSelector((state: RootState) => state.page);
   const [shareOpen, setShareOpen] = useState(false);
+  const [flashcardsOpen, setFlashcardsOpen] = useState(false);
 
   const activePage = pages.find((p) => p.id === activePageId) ?? null;
 
@@ -59,17 +61,27 @@ export default function WorkspaceShell() {
               <span className="top-bar-page-name top-bar-page-name--empty">Select a page</span>
             )}
           </div>
-          {activePageId && activePage && (
+          <div className="top-bar-actions">
             <button
-              id="share-btn"
-              className="share-trigger-btn"
-              onClick={() => setShareOpen(true)}
-              title="Share this page"
+              className="flashcards-trigger-btn"
+              onClick={() => setFlashcardsOpen(true)}
+              title="Flashcards"
             >
-              <Share2 size={15} />
-              Share
+              <Layers size={15} />
+              Flashcards
             </button>
-          )}
+            {activePageId && activePage && (
+              <button
+                id="share-btn"
+                className="share-trigger-btn"
+                onClick={() => setShareOpen(true)}
+                title="Share this page"
+              >
+                <Share2 size={15} />
+                Share
+              </button>
+            )}
+          </div>
         </div>
 
         <BlockNoteEditor key={activePageId || "empty"} />
@@ -82,6 +94,14 @@ export default function WorkspaceShell() {
           pageId={activePageId}
           pageTitle={activePage.title || "Untitled"}
           onClose={() => setShareOpen(false)}
+        />
+      )}
+
+      {flashcardsOpen && (
+        <FlashcardsModal
+          activePageId={activePageId ?? null}
+          activePageTitle={activePage?.title ?? null}
+          onClose={() => setFlashcardsOpen(false)}
         />
       )}
     </main>

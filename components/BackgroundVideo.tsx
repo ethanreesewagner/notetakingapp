@@ -10,25 +10,19 @@ import {
   VolumeX,
   Power,
   X,
+  Plus,
+  Loader2,
 } from "lucide-react";
-
-// Extract an 11-char YouTube video ID from common URL / share forms.
-function parseYouTubeId(input: string): string | null {
-  const raw = input.trim();
-  if (/^[A-Za-z0-9_-]{11}$/.test(raw)) return raw;
-  const patterns = [
-    /(?:youtube\.com\/watch\?(?:.*&)?v=)([A-Za-z0-9_-]{11})/,
-    /(?:youtu\.be\/)([A-Za-z0-9_-]{11})/,
-    /(?:youtube\.com\/embed\/)([A-Za-z0-9_-]{11})/,
-    /(?:youtube\.com\/shorts\/)([A-Za-z0-9_-]{11})/,
-    /(?:youtube\.com\/live\/)([A-Za-z0-9_-]{11})/,
-  ];
-  for (const re of patterns) {
-    const m = raw.match(re);
-    if (m) return m[1];
-  }
-  return null;
-}
+import { useAuth } from "../lib/auth";
+import {
+  getLecturesApi,
+  addLectureApi,
+  updateLectureApi,
+  deleteLectureApi,
+} from "../lib/apiClient";
+import { loadYouTubeApi, parseYouTubeId, formatTime, type YTPlayer } from "../lib/youtube";
+import { useMediaPlaylist } from "../lib/useMediaPlaylist";
+import DraggablePlaylist from "./DraggablePlaylist";
 
 // The three preset "mix" modes → website opacity in front of the video.
 const MODE_FULL_WEBSITE = 1;
@@ -43,9 +37,16 @@ type Persisted = {
   active: boolean;
   opacity: number;
   muted: boolean;
+  activeLectureId: string | null;
 };
 
 export default function BackgroundVideo() {
+  const { user } = useAuth();
+  const lectures = useMediaPlaylist(
+    { get: getLecturesApi, add: addLectureApi, update: updateLectureApi, remove: deleteLectureApi },
+    !!user?.uid
+  );
+
   const [open, setOpen] = useState(false);
   const [url, setUrl] = useState("");
   const [videoId, setVideoId] = useState<string | null>(null);
@@ -53,9 +54,30 @@ export default function BackgroundVideo() {
   const [opacity, setOpacity] = useState(MODE_BALANCED);
   const [muted, setMuted] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [activeLectureId, setActiveLectureId] = useState<string | null>(null);
   const hydrated = useRef(false);
 
-  // Restore any previous session from localStorage.
+  // Player + progress
+  const playerRef = useRef<YTPlayer | null>(null);
+  const hostRef = useRef<HTMLDivElement | null>(null);
+  const [ready, setReady] = useState(false);
+  const [elapsed, setElapsed] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const scrubbingRef = useRef(false);
+
+  const videoIdRef = useRef(videoId);
+  videoIdRef.current = videoId;
+  const mutedRef = useRef(muted);
+  mutedRef.current = muted;
+
+  // Add-lecture form
+  const [showAdd, setShowAdd] = useState(false);
+  const [newUrl, setNewUrl] = useState("");
+  const [newTitle, setNewTitle] = useState("");
+  const [adding, setAdding] = useState(false);
+  const [addError, setAddError] = useState<string | null>(null);
+
+  // Restore previous session.
   useEffect(() => {
     try {
       const raw = localStorage.getItem(LS_KEY);
@@ -66,15 +88,15 @@ export default function BackgroundVideo() {
         setActive(Boolean(p.active) && Boolean(p.videoId));
         setOpacity(typeof p.opacity === "number" ? p.opacity : MODE_BALANCED);
         setMuted(p.muted ?? true);
+        setActiveLectureId(p.activeLectureId ?? null);
       }
     } catch {
-      /* ignore malformed storage */
+      /* ignore */
     }
     hydrated.current = true;
   }, []);
 
-  // Drive the website opacity via a CSS variable the layout reads, and toggle
-  // a body class so we only dim the site while a background video is showing.
+  // Drive website opacity via a CSS variable the layout reads.
   useEffect(() => {
     const root = document.documentElement;
     if (active && videoId) {
@@ -86,16 +108,87 @@ export default function BackgroundVideo() {
     }
   }, [active, videoId, opacity]);
 
-  // Persist state after hydration.
+  // Persist.
   useEffect(() => {
     if (!hydrated.current) return;
-    const p: Persisted = { url, videoId, active, opacity, muted };
+    const p: Persisted = { url, videoId, active, opacity, muted, activeLectureId };
     try {
       localStorage.setItem(LS_KEY, JSON.stringify(p));
     } catch {
-      /* ignore quota errors */
+      /* ignore */
     }
-  }, [url, videoId, active, opacity, muted]);
+  }, [url, videoId, active, opacity, muted, activeLectureId]);
+
+  // Create / destroy the background player when it turns on/off.
+  useEffect(() => {
+    if (!active || !videoId) return;
+    let cancelled = false;
+    loadYouTubeApi().then(() => {
+      if (cancelled || !hostRef.current || !window.YT) return;
+      const id = videoIdRef.current!;
+      playerRef.current = new window.YT.Player(hostRef.current, {
+        height: "100%",
+        width: "100%",
+        videoId: id,
+        playerVars: {
+          autoplay: 1,
+          controls: 0,
+          loop: 1,
+          playlist: id,
+          modestbranding: 1,
+          rel: 0,
+          playsinline: 1,
+          mute: mutedRef.current ? 1 : 0,
+        },
+        events: {
+          onReady: () => {
+            if (cancelled) return;
+            setReady(true);
+            if (mutedRef.current) playerRef.current?.mute();
+            else playerRef.current?.unMute();
+            playerRef.current?.playVideo();
+          },
+        },
+      });
+    });
+    return () => {
+      cancelled = true;
+      setReady(false);
+      playerRef.current?.destroy();
+      playerRef.current = null;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [active]);
+
+  // Swap the video without recreating the player.
+  useEffect(() => {
+    if (active && ready && playerRef.current && videoId) {
+      playerRef.current.loadVideoById(videoId);
+      setElapsed(0);
+      setDuration(0);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [videoId]);
+
+  // Reflect the mute toggle.
+  useEffect(() => {
+    if (playerRef.current && ready) {
+      if (muted) playerRef.current.mute();
+      else playerRef.current.unMute();
+    }
+  }, [muted, ready]);
+
+  // Poll playback position for the seek bar.
+  useEffect(() => {
+    if (!active || !ready) return;
+    const id = window.setInterval(() => {
+      const p = playerRef.current;
+      if (!p || scrubbingRef.current) return;
+      setDuration(p.getDuration?.() ?? 0);
+      setElapsed(p.getCurrentTime?.() ?? 0);
+    }, 500);
+    return () => window.clearInterval(id);
+  }, [active, ready]);
 
   const applyUrl = () => {
     const id = parseYouTubeId(url);
@@ -105,33 +198,82 @@ export default function BackgroundVideo() {
     }
     setError(null);
     setVideoId(id);
+    setActiveLectureId(null);
     setActive(true);
   };
 
-  const disable = () => {
-    setActive(false);
+  const playLecture = (id: string) => {
+    const lec = lectures.items.find((l) => l.id === id);
+    if (!lec) return;
+    setVideoId(lec.videoId);
+    setUrl(`https://youtu.be/${lec.videoId}`);
+    setActiveLectureId(id);
+    setActive(true);
   };
 
-  const embedSrc = videoId
-    ? `https://www.youtube.com/embed/${videoId}?autoplay=1&controls=0&loop=1&playlist=${videoId}` +
-      `&mute=${muted ? 1 : 0}&modestbranding=1&rel=0&playsinline=1&iv_load_policy=3`
-    : null;
+  const handleAddLecture = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newUrl.trim() || adding) return;
+    setAdding(true);
+    setAddError(null);
+    try {
+      await lectures.add(newUrl.trim(), newTitle.trim() || undefined);
+      setNewUrl("");
+      setNewTitle("");
+      setShowAdd(false);
+    } catch (err) {
+      setAddError(err instanceof Error ? err.message : "Could not add lecture.");
+    } finally {
+      setAdding(false);
+    }
+  };
 
+  const onSeekInput = (v: number) => {
+    scrubbingRef.current = true;
+    setElapsed(v);
+  };
+  const onSeekCommit = (v: number) => {
+    playerRef.current?.seekTo(v, true);
+    setElapsed(v);
+    scrubbingRef.current = false;
+  };
+
+  const embedActive = active && videoId;
+  const seekMax = duration > 0 ? duration : 0;
+  const seekPct = seekMax ? (Math.min(elapsed, seekMax) / seekMax) * 100 : 0;
   const pct = Math.round(opacity * 100);
 
   return (
     <>
-      {/* Full-viewport video layer, pinned behind the entire site (z-index:-1). */}
-      {active && embedSrc && (
+      {/* Full-viewport video layer, pinned behind everything (z-index:-1). */}
+      {embedActive && (
         <div className="bgv-layer" aria-hidden>
-          <iframe
-            key={embedSrc}
-            className="bgv-frame"
-            src={embedSrc}
-            title="Background video"
-            allow="autoplay; encrypted-media"
-            frameBorder={0}
+          <div ref={hostRef} className="bgv-frame" />
+        </div>
+      )}
+
+      {/* Interactive red seek bar along the bottom of the screen. */}
+      {embedActive && (
+        <div className="bgv-seekbar">
+          <input
+            className="bgv-seek"
+            type="range"
+            min={0}
+            max={seekMax || 100}
+            step={1}
+            value={Math.min(elapsed, seekMax || 100)}
+            disabled={!ready || seekMax === 0}
+            onChange={(e) => onSeekInput(Number(e.target.value))}
+            onMouseUp={(e) => onSeekCommit(Number((e.target as HTMLInputElement).value))}
+            onTouchEnd={(e) => onSeekCommit(Number((e.target as HTMLInputElement).value))}
+            aria-label="Seek video"
+            style={{
+              background: `linear-gradient(to right, #ff0000 ${seekPct}%, rgba(255,255,255,0.25) ${seekPct}%)`,
+            }}
           />
+          <div className="bgv-seek-time">
+            {formatTime(elapsed)} / {formatTime(duration)}
+          </div>
         </div>
       )}
 
@@ -143,11 +285,7 @@ export default function BackgroundVideo() {
               <span className="bgv-panel-title">
                 <Film size={13} /> Background Video
               </span>
-              <button
-                className="bgv-close"
-                onClick={() => setOpen(false)}
-                aria-label="Close"
-              >
+              <button className="bgv-close" onClick={() => setOpen(false)} aria-label="Close">
                 <X size={14} />
               </button>
             </div>
@@ -181,9 +319,7 @@ export default function BackgroundVideo() {
                 <span>Website</span>
               </button>
               <button
-                className={`bgv-mode ${
-                  opacity > MODE_FULL_VIDEO && opacity < 0.99 ? "active" : ""
-                }`}
+                className={`bgv-mode ${opacity > MODE_FULL_VIDEO && opacity < 0.99 ? "active" : ""}`}
                 onClick={() => setOpacity(MODE_BALANCED)}
                 disabled={!videoId}
                 title="Balanced — both visible"
@@ -230,7 +366,7 @@ export default function BackgroundVideo() {
                 <span>{muted ? "Muted" : "Sound on"}</span>
               </button>
               {active ? (
-                <button className="bgv-power off" onClick={disable}>
+                <button className="bgv-power off" onClick={() => setActive(false)}>
                   <Power size={15} /> Turn off
                 </button>
               ) : (
@@ -243,6 +379,63 @@ export default function BackgroundVideo() {
                 </button>
               )}
             </div>
+
+            {/* Saved lectures playlist */}
+            {user && (
+              <div className="bgv-lectures">
+                <div className="media-section-label">Your lectures</div>
+                <DraggablePlaylist
+                  items={lectures.items}
+                  activeId={activeLectureId}
+                  playing={active && ready}
+                  emptyText="No saved lectures yet"
+                  onPlay={playLecture}
+                  onRename={lectures.rename}
+                  onDelete={lectures.remove}
+                  onReorder={lectures.reorder}
+                />
+
+                {showAdd ? (
+                  <form className="music-add-form" onSubmit={handleAddLecture}>
+                    <input
+                      className="music-add-input"
+                      type="text"
+                      placeholder="Paste a lecture link…"
+                      value={newUrl}
+                      onChange={(e) => setNewUrl(e.target.value)}
+                      autoFocus
+                    />
+                    <input
+                      className="music-add-input"
+                      type="text"
+                      placeholder="Title (optional)"
+                      value={newTitle}
+                      onChange={(e) => setNewTitle(e.target.value)}
+                    />
+                    {addError && <div className="music-add-error">{addError}</div>}
+                    <div className="music-add-actions">
+                      <button
+                        type="button"
+                        className="music-add-cancel"
+                        onClick={() => {
+                          setShowAdd(false);
+                          setAddError(null);
+                        }}
+                      >
+                        Cancel
+                      </button>
+                      <button type="submit" className="music-add-save" disabled={adding || !newUrl.trim()}>
+                        {adding ? <Loader2 size={13} className="animate-spin" /> : "Add"}
+                      </button>
+                    </div>
+                  </form>
+                ) : (
+                  <button className="music-add-btn" onClick={() => setShowAdd(true)}>
+                    <Plus size={14} /> Save a lecture
+                  </button>
+                )}
+              </div>
+            )}
           </div>
         )}
 

@@ -7,7 +7,7 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  return updateMedia("tracks", id, req);
+  return updateMedia("lectures", id, req);
 }
 
 export async function DELETE(
@@ -15,5 +15,5 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  return deleteMedia("tracks", id);
+  return deleteMedia("lectures", id);
 }
