@@ -38,6 +38,7 @@ const DEFAULT_PLAYLIST: Track[] = [
   { key: "d2", title: "Simpsonwave 1995", artist: "FrankJavCee", videoId: "EuVTt-M3IXo" },
   { key: "d3", title: "Liminal Space Music", artist: "Dreamcore / Weirdcore", videoId: "sJnsxAF6Zoo" },
   { key: "d4", title: "Complete Music Mix", artist: "Frutiger Aero", videoId: "J_BwEIjCGHc" },
+  { key: "d5", title: "Hide (CS01 Version)", artist: "Dorian Concept", videoId: "tlFolRo1WiE" },
 ];
 
 export default function BackgroundMusicPlayer() {

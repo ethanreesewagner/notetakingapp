@@ -22,6 +22,8 @@ import {
 } from "lucide-react";
 import DeleteConfirmDialog from "./DeleteConfirmDialog";
 import BackgroundMusicPlayer from "./BackgroundMusicPlayer";
+import ProfileModal from "./ProfileModal";
+import { getProfileApi, type UserProfile } from "../lib/apiClient";
 
 function PageTreeItem({
   node,
@@ -158,6 +160,10 @@ export default function Sidebar() {
   const [sharedWithMe, setSharedWithMe] = useState<SharedWithMeEntry[]>([]);
   const [expandedOwners, setExpandedOwners] = useState<Set<string>>(new Set());
 
+  // Profile
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [profileOpen, setProfileOpen] = useState(false);
+
   const pageTree = useMemo(() => buildPageTree(pages), [pages]);
   const sharedGroups = useMemo(() => groupByOwner(sharedWithMe), [sharedWithMe]);
 
@@ -178,6 +184,10 @@ export default function Sidebar() {
 
       getSharedWithMeApi()
         .then(setSharedWithMe)
+        .catch(() => {});
+
+      getProfileApi()
+        .then(setProfile)
         .catch(() => {});
     }
   }, [user?.uid, dispatch]);
@@ -265,8 +275,9 @@ export default function Sidebar() {
   }
 
   // Derive avatar initials and colour from user info
-  const displayName = user?.displayName || user?.email?.split("@")[0] || "?";
-  const initials = displayName
+  const profileDisplayName =
+    profile?.name || user?.displayName || user?.email?.split("@")[0] || "?";
+  const initials = profileDisplayName
     .split(/\s+/)
     .map((w) => w[0]?.toUpperCase() ?? "")
     .slice(0, 2)
@@ -280,21 +291,39 @@ export default function Sidebar() {
     <>
       <div className="sidebar">
         {/* ── User profile ─────────────────────────────────────────── */}
-        <div className="sidebar-profile">
-          <div className="sidebar-profile-avatar" style={{ background: avatarColor }}>
-            {initials || "?"}
-          </div>
-          <div className="sidebar-profile-info">
-            <span className="sidebar-profile-name" title={displayName}>
-              {displayName}
-            </span>
-            {user?.email && (
-              <span className="sidebar-profile-email" title={user.email}>
-                {user.email}
-              </span>
+        <button
+          className="sidebar-profile"
+          onClick={() => setProfileOpen(true)}
+          title="Edit your profile"
+        >
+          <div
+            className="sidebar-profile-avatar"
+            style={profile?.photoURL ? undefined : { background: avatarColor }}
+          >
+            {profile?.photoURL ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={profile.photoURL} alt="Profile" className="sidebar-profile-photo" />
+            ) : (
+              initials || "?"
             )}
           </div>
-        </div>
+          <div className="sidebar-profile-info">
+            <span className="sidebar-profile-name" title={profileDisplayName}>
+              {profileDisplayName}
+            </span>
+            {profile?.bio ? (
+              <span className="sidebar-profile-email" title={profile.bio}>
+                {profile.bio}
+              </span>
+            ) : (
+              user?.email && (
+                <span className="sidebar-profile-email" title={user.email}>
+                  {user.email}
+                </span>
+              )
+            )}
+          </div>
+        </button>
 
         {/* ── My Pages section ─────────────────────────────────────── */}
         <div className="sidebar-section-header" onClick={() => setMyPagesOpen((v) => !v)}>
@@ -425,6 +454,18 @@ export default function Sidebar() {
           onConfirm={handleDeleteConfirm}
           onCancel={() => setDeleteTarget(null)}
           deleting={deleting}
+        />
+      )}
+
+      {/* Profile editor */}
+      {profileOpen && profile && (
+        <ProfileModal
+          profile={profile}
+          onClose={() => setProfileOpen(false)}
+          onSaved={(p) => {
+            setProfile(p);
+            refresh();
+          }}
         />
       )}
     </>

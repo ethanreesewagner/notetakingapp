@@ -89,6 +89,25 @@ export async function logoutApi() {
   return fetchWithAuth("/api/auth/logout", { method: "POST" });
 }
 
+// ── User profile ──────────────────────────────────────────────────────────────
+
+export interface UserProfile {
+  name: string;
+  email: string;
+  bio: string;
+  photoURL: string;
+}
+
+export async function getProfileApi(): Promise<UserProfile> {
+  return fetchWithAuth("/api/profile");
+}
+
+export async function updateProfileApi(
+  updates: Partial<Pick<UserProfile, "name" | "bio" | "photoURL">>
+) {
+  return fetchWithAuth("/api/profile", { method: "PUT", body: updates });
+}
+
 // ── Page sharing ──────────────────────────────────────────────────────────────
 
 export async function createShareApi(
