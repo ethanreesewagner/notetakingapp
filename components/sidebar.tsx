@@ -264,9 +264,38 @@ export default function Sidebar() {
     );
   }
 
+  // Derive avatar initials and colour from user info
+  const displayName = user?.displayName || user?.email?.split("@")[0] || "?";
+  const initials = displayName
+    .split(/\s+/)
+    .map((w) => w[0]?.toUpperCase() ?? "")
+    .slice(0, 2)
+    .join("");
+  // Deterministic accent colour based on email
+  const avatarHues = [231, 258, 187, 340, 30, 160];
+  const hue = avatarHues[(user?.email?.charCodeAt(0) ?? 0) % avatarHues.length];
+  const avatarColor = `hsl(${hue}, 65%, 55%)`;
+
   return (
     <>
       <div className="sidebar">
+        {/* ── User profile ─────────────────────────────────────────── */}
+        <div className="sidebar-profile">
+          <div className="sidebar-profile-avatar" style={{ background: avatarColor }}>
+            {initials || "?"}
+          </div>
+          <div className="sidebar-profile-info">
+            <span className="sidebar-profile-name" title={displayName}>
+              {displayName}
+            </span>
+            {user?.email && (
+              <span className="sidebar-profile-email" title={user.email}>
+                {user.email}
+              </span>
+            )}
+          </div>
+        </div>
+
         {/* ── My Pages section ─────────────────────────────────────── */}
         <div className="sidebar-section-header" onClick={() => setMyPagesOpen((v) => !v)}>
           <span className="sidebar-section-label">
