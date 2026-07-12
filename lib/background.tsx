@@ -139,8 +139,12 @@ export function BackgroundProvider({ children }: { children: React.ReactNode }) 
         "--editor-bg",
         `linear-gradient(${settings.editorAngle}deg, ${from}, ${to})`
       );
+      // Make BlockNote's own editor surface transparent so the customizable
+      // (and see-through) note background shows instead of a white rectangle.
+      root.style.setProperty("--editor-bn-bg", "transparent");
     } else {
       root.style.removeProperty("--editor-bg");
+      root.style.removeProperty("--editor-bn-bg");
     }
 
     if (settings.textColor) {

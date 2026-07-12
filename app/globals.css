@@ -661,6 +661,15 @@ body {
   text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
+/* Drive BlockNote's own editor surface + text from the appearance settings.
+   Defaults reproduce the original opaque-white editor; when the note area is
+   customized, --editor-bn-bg becomes transparent so the (see-through) note
+   background shows through, and --editor-text recolors the note text. */
+.editor-body .bn-root {
+  --bn-colors-editor-background: var(--editor-bn-bg, #ffffff);
+  --bn-colors-editor-text: var(--editor-text, #1a1a1a);
+}
+
 .editor-body .title-input::placeholder {
   color: rgba(255, 255, 255, 0.4);
 }
