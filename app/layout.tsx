@@ -3,6 +3,7 @@ import './globals.css';
 import { AuthProvider } from '../lib/auth';
 import StoreProvider from '../components/StoreProvider';
 import BackgroundVideo from '../components/BackgroundVideo';
+import { BackgroundProvider } from '../lib/background';
 
 export const metadata: Metadata = {
   title: 'Notetaking App',
@@ -19,10 +20,12 @@ export default function RootLayout({
       <body>
         <AuthProvider>
           <StoreProvider>
-            {/* Optional YouTube background video sits behind everything;
-                its controls stay fully opaque outside .site-layer. */}
-            <BackgroundVideo />
-            <div className="site-layer">{children}</div>
+            <BackgroundProvider>
+              {/* Optional YouTube background video sits behind everything;
+                  its controls stay fully opaque outside .site-layer. */}
+              <BackgroundVideo />
+              <div className="site-layer">{children}</div>
+            </BackgroundProvider>
           </StoreProvider>
         </AuthProvider>
       </body>

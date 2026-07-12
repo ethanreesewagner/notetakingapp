@@ -19,11 +19,13 @@ import {
   Trash2,
   Users,
   User,
+  Palette,
 } from "lucide-react";
 import DeleteConfirmDialog from "./DeleteConfirmDialog";
 import BackgroundMusicPlayer from "./BackgroundMusicPlayer";
 import ProfileModal from "./ProfileModal";
 import { getProfileApi, type UserProfile } from "../lib/apiClient";
+import { useBackground } from "../lib/background";
 
 function PageTreeItem({
   node,
@@ -143,6 +145,7 @@ function groupByOwner(entries: SharedWithMeEntry[]): Map<string, SharedWithMeEnt
 
 export default function Sidebar() {
   const { user, loading, refresh } = useAuth();
+  const background = useBackground();
   const dispatch = useDispatch();
   const router = useRouter();
   const { pages, activePageId } = useSelector((state: RootState) => state.page);
@@ -432,6 +435,14 @@ export default function Sidebar() {
         {/* ── Footer ───────────────────────────────────────────────── */}
         <div className="sidebar-footer">
           <BackgroundMusicPlayer />
+          <button
+            className="sign-out-btn"
+            title="Customize app background"
+            onClick={background.open}
+          >
+            <Palette size={16} />
+            <span>Appearance</span>
+          </button>
           <button
             className="sign-out-btn"
             title="Sign Out"
