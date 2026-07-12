@@ -255,6 +255,90 @@ export default function AppearanceModal({
           )}
         </div>
 
+        {/* ── Note-taking area ─────────────────────────────────────── */}
+        <div className="appearance-divider" />
+        <div className="appearance-section-title">Note-taking area</div>
+
+        <label className="appearance-row">
+          <span>Customize note background</span>
+          <input
+            type="checkbox"
+            checked={settings.editorCustom}
+            onChange={(e) => patch({ editorCustom: e.target.checked })}
+          />
+        </label>
+
+        {settings.editorCustom && (
+          <>
+            <label className="appearance-row">
+              <span>From</span>
+              <input
+                type="color"
+                value={settings.editorFrom}
+                onChange={(e) => patch({ editorFrom: e.target.value })}
+              />
+            </label>
+            <label className="appearance-row">
+              <span>To</span>
+              <input
+                type="color"
+                value={settings.editorTo}
+                onChange={(e) => patch({ editorTo: e.target.value })}
+              />
+            </label>
+            <label className="appearance-row">
+              <span>Angle · {settings.editorAngle}°</span>
+              <input
+                type="range"
+                min={0}
+                max={360}
+                value={settings.editorAngle}
+                onChange={(e) => patch({ editorAngle: Number(e.target.value) })}
+              />
+            </label>
+            <label className="appearance-row">
+              <span>See-through · {Math.round((1 - settings.editorOpacity) * 100)}%</span>
+              <input
+                type="range"
+                min={10}
+                max={100}
+                value={Math.round(settings.editorOpacity * 100)}
+                onChange={(e) => patch({ editorOpacity: Number(e.target.value) / 100 })}
+              />
+            </label>
+          </>
+        )}
+
+        <div className="appearance-section-title">Text color</div>
+        <div className="appearance-swatches">
+          <button
+            className={`appearance-swatch text-default ${settings.textColor === "" ? "active" : ""}`}
+            onClick={() => patch({ textColor: "" })}
+            title="Default"
+          >
+            {settings.textColor === "" ? <Check size={14} /> : "A"}
+          </button>
+          {["#ffffff", "#111827", "#fbbf24", "#f87171", "#34d399", "#60a5fa", "#c084fc"].map((c) => (
+            <button
+              key={c}
+              className={`appearance-swatch ${settings.textColor === c ? "active" : ""}`}
+              style={{ background: c, color: c === "#ffffff" ? "#111" : "#fff" }}
+              onClick={() => patch({ textColor: c })}
+              aria-label={c}
+            >
+              {settings.textColor === c && <Check size={14} />}
+            </button>
+          ))}
+        </div>
+        <label className="appearance-row">
+          <span>Custom text color</span>
+          <input
+            type="color"
+            value={settings.textColor || "#ffffff"}
+            onChange={(e) => patch({ textColor: e.target.value })}
+          />
+        </label>
+
         <div className="appearance-footer">
           <button className="fc-btn ghost" onClick={() => onChange({ ...DEFAULT_SETTINGS })}>
             Reset

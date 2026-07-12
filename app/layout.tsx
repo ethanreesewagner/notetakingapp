@@ -23,8 +23,9 @@ export default function RootLayout({
             <BackgroundProvider>
               {/* Optional YouTube background video sits behind everything;
                   its controls stay fully opaque outside .site-layer. */}
-              <BackgroundVideo />
-              <div className="site-layer">{children}</div>
+              <BackgroundVideo>
+                <div className="site-layer">{children}</div>
+              </BackgroundVideo>
             </BackgroundProvider>
           </StoreProvider>
         </AuthProvider>

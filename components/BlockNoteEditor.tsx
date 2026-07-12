@@ -233,19 +233,8 @@ export default function BlockNoteEditor() {
     return null;
   }
 
-  const dateStr = activePage.updatedAt?.toDate?.()?.toLocaleString() || new Date(activePage.updatedAt).toLocaleString();
-
   return (
     <>
-      <div className="main-content-header">
-         <span style={{ fontSize: '0.875rem', color: "var(--text-secondary)", fontWeight: 500 }}>
-          {title || "Untitled"}
-         </span>
-        <div className="editor-meta">
-          Edited: {dateStr !== "Invalid Date" ? dateStr : "Just now"}
-        </div>
-      </div>
-
       <div className="editor-body">
         {breadcrumbs.length > 1 && (
           <nav className="page-breadcrumbs" aria-label="Page hierarchy">

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { createContext, useContext, useEffect, useRef, useState } from "react";
 import {
   Film,
   Monitor,
@@ -31,6 +31,20 @@ const MODE_FULL_VIDEO = 0.12;
 
 const LS_KEY = "bgVideo";
 
+// Lets the top bar render the background-video trigger while the heavy player
+// layers stay mounted here (outside .site-layer, so they never get dimmed).
+interface BgVideoContextValue {
+  open: boolean;
+  setOpen: (v: boolean) => void;
+  active: boolean;
+}
+const BackgroundVideoContext = createContext<BgVideoContextValue>({
+  open: false,
+  setOpen: () => {},
+  active: false,
+});
+export const useBackgroundVideo = () => useContext(BackgroundVideoContext);
+
 type Persisted = {
   url: string;
   videoId: string | null;
@@ -40,7 +54,7 @@ type Persisted = {
   activeLectureId: string | null;
 };
 
-export default function BackgroundVideo() {
+export default function BackgroundVideo({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   const lectures = useMediaPlaylist(
     { get: getLecturesApi, add: addLectureApi, update: updateLectureApi, remove: deleteLectureApi },
@@ -244,7 +258,7 @@ export default function BackgroundVideo() {
   const pct = Math.round(opacity * 100);
 
   return (
-    <>
+    <BackgroundVideoContext.Provider value={{ open, setOpen, active }}>
       {/* Full-viewport video layer, pinned behind everything (z-index:-1). */}
       {embedActive && (
         <div className="bgv-layer" aria-hidden>
@@ -277,18 +291,17 @@ export default function BackgroundVideo() {
         </div>
       )}
 
-      {/* Floating control widget — always fully opaque, top-right. */}
-      <div className="bgv-widget">
-        {open && (
-          <div className="bgv-panel">
-            <div className="bgv-panel-header">
-              <span className="bgv-panel-title">
-                <Film size={13} /> Background Video
-              </span>
-              <button className="bgv-close" onClick={() => setOpen(false)} aria-label="Close">
-                <X size={14} />
-              </button>
-            </div>
+      {/* Control panel — always fully opaque, anchored under the top bar. */}
+      {open && (
+        <div className="bgv-panel">
+          <div className="bgv-panel-header">
+            <span className="bgv-panel-title">
+              <Film size={13} /> Background Video
+            </span>
+            <button className="bgv-close" onClick={() => setOpen(false)} aria-label="Close">
+              <X size={14} />
+            </button>
+          </div>
 
             <div className="bgv-input-row">
               <input
@@ -436,18 +449,10 @@ export default function BackgroundVideo() {
                 )}
               </div>
             )}
-          </div>
-        )}
+        </div>
+      )}
 
-        <button
-          className={`bgv-toggle ${active ? "on" : ""}`}
-          onClick={() => setOpen((v) => !v)}
-          title="Background video"
-          aria-label="Background video"
-        >
-          <Film size={18} />
-        </button>
-      </div>
-    </>
+      {children}
+    </BackgroundVideoContext.Provider>
   );
 }

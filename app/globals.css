@@ -562,7 +562,44 @@ body {
 .top-bar-breadcrumb {
   display: flex;
   align-items: center;
+  gap: 0.75rem;
   min-width: 0;
+}
+
+.top-bar-date {
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+  opacity: 0.7;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.video-trigger-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.3rem 0.85rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  border-radius: 8px;
+  background: rgba(244, 63, 94, 0.16);
+  color: #fda4af;
+  border: 1px solid rgba(244, 63, 94, 0.35);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.video-trigger-btn:hover {
+  background: rgba(244, 63, 94, 0.3);
+  color: #fff;
+  border-color: rgba(244, 63, 94, 0.6);
+}
+
+.video-trigger-btn.on {
+  background: #f43f5e;
+  color: #fff;
+  border-color: #f43f5e;
 }
 
 .top-bar-page-name {
@@ -612,12 +649,15 @@ body {
   flex: 1;
   overflow-y: auto;
   padding: 3rem 6rem;
-  background: linear-gradient(180deg, #0b132b 0%, #1e2a3a 15%, #3a4555 30%, #5a6070 42%, #ffffff 65%);
-  color: #1a1a1a;
+  background: var(
+    --editor-bg,
+    linear-gradient(180deg, #0b132b 0%, #1e2a3a 15%, #3a4555 30%, #5a6070 42%, #ffffff 65%)
+  );
+  color: var(--editor-text, #1a1a1a);
 }
 
 .editor-body .title-input {
-  color: #ffffff;
+  color: var(--editor-title, #ffffff);
   text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
@@ -2185,6 +2225,10 @@ body {
 }
 
 .bgv-panel {
+  position: fixed;
+  top: 3.25rem;
+  right: 1rem;
+  z-index: 1600;
   width: 300px;
   max-width: calc(100vw - 2rem);
   max-height: calc(100vh - 5rem);
@@ -3572,4 +3616,25 @@ body {
   display: flex;
   justify-content: space-between;
   gap: 0.6rem;
+}
+
+.appearance-divider {
+  height: 1px;
+  background: var(--glass-border);
+  margin: 0.4rem 0 0.9rem;
+}
+
+.appearance-section-title {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-secondary);
+  margin: 0.6rem 0 0.5rem;
+}
+
+.appearance-swatch.text-default {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px dashed var(--glass-border);
+  font-weight: 700;
+  font-size: 0.9rem;
 }

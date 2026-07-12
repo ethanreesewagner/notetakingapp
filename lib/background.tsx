@@ -22,6 +22,14 @@ export interface BgSettings {
   imageUrl: string; // http(s) URL or data URL (image or gif)
   imageFit: ImageFit;
   overlay: number; // 0..0.8 dark scrim for readability
+
+  // Note-taking area
+  editorCustom: boolean; // override the editor's default gradient
+  editorFrom: string;
+  editorTo: string;
+  editorAngle: number;
+  editorOpacity: number; // 0..1 — lower lets the app background show through
+  textColor: string; // "" = default; applied to app + note text everywhere
 }
 
 export const DEFAULT_SETTINGS: BgSettings = {
@@ -34,9 +42,26 @@ export const DEFAULT_SETTINGS: BgSettings = {
   imageUrl: "",
   imageFit: "cover",
   overlay: 0.3,
+
+  editorCustom: false,
+  editorFrom: "#0b132b",
+  editorTo: "#ffffff",
+  editorAngle: 180,
+  editorOpacity: 1,
+  textColor: "",
 };
 
 const LS_KEY = "appBackground";
+
+// Convert "#rrggbb" (+ alpha 0..1) to an rgba() string.
+export function hexToRgba(hex: string, alpha: number): string {
+  const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex.trim());
+  if (!m) return hex;
+  const r = parseInt(m[1], 16);
+  const g = parseInt(m[2], 16);
+  const b = parseInt(m[3], 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
 
 // Turn the saved settings into an inline style for the fixed background layer.
 export function computeBackgroundStyle(s: BgSettings): CSSProperties {
@@ -101,6 +126,33 @@ export function BackgroundProvider({ children }: { children: React.ReactNode }) 
       // Most likely a too-large uploaded image; it still applies this session.
     }
   }, [settings, hydrated]);
+
+  // Apply note-area gradient / transparency and global text color via CSS
+  // variables that globals.css reads (with sensible fallbacks when unset).
+  useEffect(() => {
+    const root = document.documentElement;
+
+    if (settings.editorCustom) {
+      const from = hexToRgba(settings.editorFrom, settings.editorOpacity);
+      const to = hexToRgba(settings.editorTo, settings.editorOpacity);
+      root.style.setProperty(
+        "--editor-bg",
+        `linear-gradient(${settings.editorAngle}deg, ${from}, ${to})`
+      );
+    } else {
+      root.style.removeProperty("--editor-bg");
+    }
+
+    if (settings.textColor) {
+      root.style.setProperty("--text-primary", settings.textColor);
+      root.style.setProperty("--editor-text", settings.textColor);
+      root.style.setProperty("--editor-title", settings.textColor);
+    } else {
+      root.style.removeProperty("--text-primary");
+      root.style.removeProperty("--editor-text");
+      root.style.removeProperty("--editor-title");
+    }
+  }, [settings]);
 
   return (
     <BackgroundContext.Provider value={{ open: () => setOpen(true) }}>

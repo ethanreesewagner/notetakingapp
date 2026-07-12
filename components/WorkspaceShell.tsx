@@ -9,7 +9,8 @@ import FlashcardsModal from "./FlashcardsModal";
 import { useAuth } from "../lib/auth";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Loader2, Share2, Layers } from "lucide-react";
+import { Loader2, Share2, Layers, Film } from "lucide-react";
+import { useBackgroundVideo } from "./BackgroundVideo";
 import { useSelector } from "react-redux";
 import { RootState } from "../store";
 
@@ -23,8 +24,21 @@ export default function WorkspaceShell() {
   const { activePageId, pages } = useSelector((state: RootState) => state.page);
   const [shareOpen, setShareOpen] = useState(false);
   const [flashcardsOpen, setFlashcardsOpen] = useState(false);
+  const bgVideo = useBackgroundVideo();
 
   const activePage = pages.find((p) => p.id === activePageId) ?? null;
+
+  // Format the "last edited" date for the single top bar.
+  const editedStr = (() => {
+    const raw = activePage?.updatedAt as unknown;
+    if (!raw) return "";
+    const d =
+      typeof (raw as { toDate?: () => Date })?.toDate === "function"
+        ? (raw as { toDate: () => Date }).toDate()
+        : new Date(raw as string | number);
+    const s = d.toLocaleString();
+    return s === "Invalid Date" ? "" : s;
+  })();
 
   if (loading) {
     return (
@@ -56,7 +70,10 @@ export default function WorkspaceShell() {
         <div className="top-bar">
           <div className="top-bar-breadcrumb">
             {activePage ? (
-              <span className="top-bar-page-name">{activePage.title || "Untitled"}</span>
+              <>
+                <span className="top-bar-page-name">{activePage.title || "Untitled"}</span>
+                {editedStr && <span className="top-bar-date">Edited {editedStr}</span>}
+              </>
             ) : (
               <span className="top-bar-page-name top-bar-page-name--empty">Select a page</span>
             )}
@@ -81,6 +98,14 @@ export default function WorkspaceShell() {
                 Share
               </button>
             )}
+            <button
+              className={`video-trigger-btn ${bgVideo.active ? "on" : ""}`}
+              onClick={() => bgVideo.setOpen(!bgVideo.open)}
+              title="Background video"
+            >
+              <Film size={15} />
+              Video
+            </button>
           </div>
         </div>
 
